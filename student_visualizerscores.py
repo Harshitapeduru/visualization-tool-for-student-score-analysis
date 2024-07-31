@@ -226,8 +226,10 @@ if visualization_type == "Histogram":
 elif visualization_type == "Heatmap":
     st.subheader("Heatmap")
     plt.figure(figsize=(10, 6))
-    sns.heatmap(df.pivot("Subject", "Component", "Current Marks"), annot=True, fmt="g", cmap='viridis')
+    heatmap_data = df.pivot(index="Subject", columns="Component", values="Current Marks")
+    sns.heatmap(heatmap_data, annot=True, fmt="g", cmap='viridis')
     st.pyplot(plt)
+
 
 elif visualization_type == "Line Graph":
     st.subheader("Line Graph")
