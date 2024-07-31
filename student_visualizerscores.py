@@ -162,215 +162,163 @@ st.write("This tool helps you analyze your current marks and predict the require
 current_marks = {}
 st.sidebar.header("Enter Your Marks")
 for subject in subject_weightages.keys():
-    with st.sidebar.expander(f"Marks for {subject}", expanded=False):
+    with st.sidebar.expander(f"Marks for {subject}"):
         current_marks[subject] = {}
         for component in subject_weightages[subject].keys():
-            current_marks[subject][component] = st.number_input(
-                f"{component} marks for {subject}:", min_value=0, max_value=total_marks[subject][component], step=1, key=f"{subject}_{component}"
-            )
+            current_marks[subject][component] = st.number_input(f"{subject} - {component} Marks", min_value=0, max_value=total_marks[subject][component], step=1)
 
 # Input completed exams
 completed_exams = {}
-st.sidebar.header("Enter Completed Exams")
+st.sidebar.header("Completed Exams")
 for subject in subject_weightages.keys():
-    with st.sidebar.expander(f"Exams completed for {subject}", expanded=False):
-        completed_exams[subject] = st.multiselect(
-            f"Exams completed for {subject}:",
-            subject_weightages[subject].keys(),
-            key=f"{subject}_completed_exams"
-        )
+    with st.sidebar.expander(f"Completed Exams for {subject}"):
+        completed_exams[subject] = st.multiselect(f"Select completed exams for {subject}", list(subject_weightages[subject].keys()))
 
 # Input target SGPA
-target_sgpa = st.sidebar.number_input(
-    "Enter your target SGPA for the semester:", min_value=0.0, max_value=10.0, step=0.1
-)
+target_sgpa = st.sidebar.slider("🎯 Select Your Target SGPA", min_value=0.0, max_value=10.0, step=0.1)
 
-# Calculate required marks
+# Calculate required marks and adjust them
 required_marks = calculate_required_marks(target_sgpa, total_marks, subject_weightages)
-
-# Adjust marks based on completed exams and marks obtained
 adjusted_marks = adjust_marks(target_sgpa, current_marks, required_marks, completed_exams)
 
-# Check if it's feasible to achieve the target SGPA
-feasible = is_feasible(target_sgpa, current_marks, adjusted_marks)
+# Display calculated marks and feasibility
+st.header("Required Marks to Achieve Target SGPA")
+st.write("These are the marks you need to score in the remaining exams to achieve your target SGPA.")
 
-if feasible:
-    st.subheader("📊 Required Marks to Achieve Target SGPA")
-    cols = st.columns(len(subject_weightages))
-    for idx, (subject, components) in enumerate(adjusted_marks.items()):
-        with cols[idx]:
-            st.markdown(f"<div class='card'><h4>{subject}</h4>", unsafe_allow_html=True)
-            for component, marks in components.items():
-                st.write(f"{component}: {marks:.2f}")
-            st.markdown("</div>", unsafe_allow_html=True)
+feasibility = is_feasible(target_sgpa, current_marks, adjusted_marks)
+
+for subject, components in adjusted_marks.items():
+    st.subheader(subject)
+    for component, marks in components.items():
+        st.write(f"{component}: {marks:.2f} marks required")
+
+# Display feasibility
+if feasibility:
+    st.success("🎉 It is feasible to achieve your target SGPA!")
 else:
-    st.error("It is not possible to achieve the target SGPA with the current marks.")
+    st.error("⚠️ It might not be feasible to achieve your target SGPA with the current marks.")
 
 # Visualization options
-st.subheader("📈 Visualize Your Marks")
-visualization_type = st.selectbox("Select the type of visualization you want to see:", ["Histogram", "Heatmap", "Line Graph", "Scatter Plot", "Pie Chart"])
+st.header("Visualize Your Marks")
+visualization_type = st.selectbox("Select Visualization Type", ["Histogram", "Heatmap", "Line Graph", "Scatter Plot", "Pie Chart"])
 
-# Visualize the marks based on the selected visualization type
+# Create DataFrame from current and required marks
+data = []
+for subject, components in current_marks.items():
+    for component, marks in components.items():
+        data.append([subject, component, marks, adjusted_marks[subject][component]])
+df = pd.DataFrame(data, columns=["Subject", "Component", "Current Marks", "Required Marks"])
+
+# Visualizations
 if visualization_type == "Histogram":
-    st.subheader("📊 Histogram of Current Marks")
-    fig, ax = plt.subplots(figsize=(12, 6))
-    for subject, components in current_marks.items():
-        marks = [components[comp] if components[comp] is not None else 0 for comp in subject_weightages[subject].keys()]
-        ax.hist(marks, bins=10, alpha=0.5, label=subject)
-    ax.set_xlabel("Marks")
-    ax.set_ylabel("Frequency")
-    ax.legend(title="Subjects")
-    st.pyplot(fig)
+    st.subheader("Histogram")
+    for subject in subject_weightages.keys():
+        st.write(f"Histogram for {subject}")
+        plt.figure(figsize=(10, 4))
+        plt.hist(df[df['Subject'] == subject]['Current Marks'], bins=5, alpha=0.7, label='Current Marks')
+        plt.hist(df[df['Subject'] == subject]['Required Marks'], bins=5, alpha=0.7, label='Required Marks')
+        plt.legend(loc='upper right')
+        plt.title(f"{subject} - Current and Required Marks")
+        plt.xlabel("Marks")
+        plt.ylabel("Frequency")
+        st.pyplot(plt)
 
 elif visualization_type == "Heatmap":
-    st.subheader("📊 Heatmap of Current Marks")
-    data = []
-    for subject, components in current_marks.items():
-        marks = [components[comp] if components[comp] is not None else 0 for comp in subject_weightages[subject].keys()]
-        data.append(marks)
-    df = pd.DataFrame(data, index=subject_weightages.keys(), columns=subject_weightages["BD"].keys())
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.heatmap(df, annot=True, cmap="YlGnBu", fmt=".1f", linewidths=0.5, cbar=False, ax=ax)
-    st.pyplot(fig)
+    st.subheader("Heatmap")
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(df.pivot("Subject", "Component", "Current Marks"), annot=True, fmt="g", cmap='viridis')
+    st.pyplot(plt)
 
 elif visualization_type == "Line Graph":
-    st.subheader("📊 Line Graph of Current Marks")
-    fig, ax = plt.subplots(figsize=(12, 6))
-    for subject, components in current_marks.items():
-        marks = [components[comp] if components[comp] is not None else 0 for comp in subject_weightages[subject].keys()]
-        ax.plot(subject_weightages[subject].keys(), marks, marker='o', label=subject)
-    ax.set_xlabel("Components")
-    ax.set_ylabel("Marks")
-    ax.legend(title="Subjects")
-    st.pyplot(fig)
+    st.subheader("Line Graph")
+    for subject in subject_weightages.keys():
+        st.write(f"Line Graph for {subject}")
+        plt.figure(figsize=(10, 4))
+        plt.plot(df[df['Subject'] == subject]['Component'], df[df['Subject'] == subject]['Current Marks'], marker='o', label='Current Marks')
+        plt.plot(df[df['Subject'] == subject]['Component'], df[df['Subject'] == subject]['Required Marks'], marker='o', label='Required Marks')
+        plt.legend(loc='upper left')
+        plt.title(f"{subject} - Current and Required Marks")
+        plt.xlabel("Component")
+        plt.ylabel("Marks")
+        st.pyplot(plt)
 
 elif visualization_type == "Scatter Plot":
-    st.subheader("📊 Scatter Plot of Current Marks")
-    fig, ax = plt.subplots(figsize=(12, 6))
-    for subject, components in current_marks.items():
-        marks = [components[comp] if components[comp] is not None else 0 for comp in subject_weightages[subject].keys()]
-        ax.scatter(subject_weightages[subject].keys(), marks, label=subject)
-    ax.set_xlabel("Components")
-    ax.set_ylabel("Marks")
-    ax.legend(title="Subjects")
-    st.pyplot(fig)
+    st.subheader("Scatter Plot")
+    for subject in subject_weightages.keys():
+        st.write(f"Scatter Plot for {subject}")
+        plt.figure(figsize=(10, 4))
+        plt.scatter(df[df['Subject'] == subject]['Component'], df[df['Subject'] == subject]['Current Marks'], label='Current Marks')
+        plt.scatter(df[df['Subject'] == subject]['Component'], df[df['Subject'] == subject]['Required Marks'], label='Required Marks')
+        plt.legend(loc='upper left')
+        plt.title(f"{subject} - Current and Required Marks")
+        plt.xlabel("Component")
+        plt.ylabel("Marks")
+        st.pyplot(plt)
 
 elif visualization_type == "Pie Chart":
-    st.subheader("📊 Pie Chart of Course Credits")
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.pie(course_credits.values(), labels=course_credits.keys(), autopct='%1.1f%%', startangle=90)
-    ax.axis('equal')
-    st.pyplot(fig)
-
-
-# Additional features
-st.sidebar.header("**Additional Features**")
+    st.subheader("Pie Chart")
+    for subject in subject_weightages.keys():
+        st.write(f"Pie Chart for {subject}")
+        plt.figure(figsize=(10, 4))
+        plt.pie(df[df['Subject'] == subject]['Current Marks'], labels=df[df['Subject'] == subject]['Component'], autopct='%1.1f%%', startangle=140)
+        plt.title(f"{subject} - Current Marks Distribution")
+        st.pyplot(plt)
 
 # Overall analysis
-if st.sidebar.checkbox("**Overall Analysis**"):
-    overall_analysis = pd.DataFrame(current_marks)
-    st.subheader("**Overall Analysis:**")
-    st.write(overall_analysis.describe())
+st.header("📊 Overall Analysis")
+st.write("This section provides an overall analysis of your current marks and required marks to achieve your target SGPA.")
 
-# Highest, least, average subject-wise scores
-if st.sidebar.checkbox("**Subject-wise Scores**"):
-    st.subheader("**Subject-wise Scores:**")
-    
-    # Define highest, least, and average scores for each subject and exam type
-    subject_scores = {
-        "BD": {"M1": {"highest": 30, "least": 0, "avg": 15.5},
-               "M2": {"highest": 30, "least": 0, "avg": 15.5},
-               "EndSem": {"highest": 95, "least": 0, "avg": 45.5}},
-        "HPC": {"M2": {"highest": 60, "least": 15, "avg": 20},
-                "EndSem": {"highest": 80, "least": 0, "avg": 40}},
-        "SE": {"M1": {"highest": 249, "least": 0, "avg": 125},
-               "M2": {"highest": 249, "least": 0, "avg": 125},
-               "EndSem": {"highest": 90, "least": 0, "avg": 50}},
-        "CN": {"M1": {"highest": 32, "least": 12, "avg": 22},
-               "M2": {"highest": 32, "least": 12, "avg": 22},
-               "EndSem": {"highest": 85, "least": 0, "avg": 35}},
-        "CB": {"M1": {"highest": 8, "least": 0, "avg": 6},
-               "M2": {"highest": 29, "least": 0, "avg": 15},
-               "EndSem": {"highest": 90, "least": 0, "avg": 60}}
-    }
-    
-    # Display scores for each subject and exam type side by side
-    cols = st.columns(len(subject_scores))
-    for i, (subject, scores) in enumerate(subject_scores.items()):
-        with cols[i]:
-            st.markdown(f"<style>.stCheckbox>div {{background-color: #DAF0F7;}}</style>", unsafe_allow_html=True)
-            st.subheader(f"**{subject} Scores:**")
-            for exam, details in scores.items():
-                st.write(f"#### **{exam}:**")
-                st.markdown(f"<div class='card'>", unsafe_allow_html=True)
-                st.write(f"**Highest score:** {details['highest']}")
-                st.write(f"**Least score:** {details['least']}")
-                st.write(f"**Average score:** {details['avg']}")
-                st.markdown("</div>", unsafe_allow_html=True)
+# Subject-wise score breakdown
+st.header("📝 Subject-wise Score Breakdown")
+for subject in subject_weightages.keys():
+    st.subheader(subject)
+    st.write(df[df['Subject'] == subject])
 
-# Upcoming exams, assignment deadlines schedule (calendar)
-if st.sidebar.checkbox("**Upcoming Schedule**"):
-    st.subheader("**Upcoming Schedule:**")
-    schedule = {
-        "27th May 2023 (Monday)": "BD",
-        "28th May 2023 (Tuesday)": "HPC",
-        "29th May 2023 (Wednesday)": "CN",
-        "30th May 2023 (Thursday)": "SE",
-        "5th June 2023 (Wednesday)": "CB",
-    }
-    for date, subject in schedule.items():
-        st.write(f"**{date}** - {subject}")
+# Upcoming schedules
+st.header("📅 Upcoming Schedules")
+upcoming_schedules = {
+    "BD": "M2 Exam on 15th August",
+    "HPC": "EndSem Exam on 25th August",
+    "SE": "M2 Exam on 20th August",
+    "CN": "EndSem Exam on 30th August",
+    "CB": "M1 Exam on 10th August"
+}
+for subject, schedule in upcoming_schedules.items():
+    st.write(f"{subject}: {schedule}")
 
-# Faculty comments
-if st.sidebar.checkbox("**Chatbot**"):
-    st.subheader("**Chatbot:**")
-    chatbot_response = st.text_area("Enter comments or questions here:")
-    if chatbot_response:
-        # Here, you can integrate with a chatbot API or provide predefined responses.
-        st.write(f"Response to '{chatbot_response}': This is a placeholder response from the chatbot.")
+# Chatbot for faculty comments
+st.header("🗣️ Chatbot for Faculty Comments")
+faculty_comments = {
+    "BD": "Keep up the good work! Aim for consistency.",
+    "HPC": "Focus on practical implementations.",
+    "SE": "Understand the concepts thoroughly.",
+    "CN": "Practice previous years' question papers.",
+    "CB": "Revise the topics regularly."
+}
+selected_subject = st.selectbox("Select Subject for Faculty Comments", list(faculty_comments.keys()))
+if st.button("Get Faculty Comments"):
+    st.write(f"Faculty Comments for {selected_subject}: {faculty_comments[selected_subject]}")
 
-# Emotion button
-if st.sidebar.checkbox("**Emotion Button**"):
-    st.subheader("**Emotion Button:**")
-
-    # Custom CSS for larger emojis
-    st.markdown(
-        """
-        <style>
-        .large-emoji {
-            font-size: 32px; /* Adjust the size as needed */
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    cols = st.columns(len(current_marks))
-    for i, (subject, components) in enumerate(current_marks.items()):
-        with cols[i]:
-            st.subheader(f"**{subject}**")
-            for component, marks in components.items():
-                required = required_marks[subject][component]
-                if marks >= required:
-                    st.write(f"{component}: {marks} <span class='large-emoji'>😊</span>", unsafe_allow_html=True)
-                else:
-                    st.write(f"{component}: {marks} <span class='large-emoji'>😢</span>", unsafe_allow_html=True)
+# Emotion button for component-wise marks
+st.header("😊 How do you feel about your component-wise marks?")
+for subject, components in current_marks.items():
+    st.subheader(subject)
+    for component, marks in components.items():
+        emotion = st.radio(f"Your feeling about {component} marks in {subject}", ('Happy', 'Neutral', 'Unhappy'), key=f"{subject}_{component}")
 
 # Motivational quotes
-motivational_quotes = [
-    "The only way to do great work is to love what you do. - Steve Jobs",
-    "Success is not final, failure is not fatal: It is the courage to continue that counts. - Winston Churchill",
-    "Believe you can and you're halfway there. - Theodore Roosevelt",
-    "The only limit to our realization of tomorrow will be our doubts of today. - Franklin D. Roosevelt",
-    "The only person you should try to be better than is the person you were yesterday. - Unknown"
+st.header("💪 Motivational Quotes")
+quotes = [
+    "Believe in yourself and all that you are.",
+    "The only way to achieve the impossible is to believe it is possible.",
+    "Success is not the key to happiness. Happiness is the key to success.",
+    "Keep going. Everything you need will come to you at the perfect time.",
+    "Believe you can and you're halfway there."
 ]
+st.write(random.choice(quotes))
 
-st.sidebar.subheader("**Motivational Quote:**")
-st.sidebar.write("**" + random.choice(motivational_quotes) + "**")
-
-
-# Add a download button for the gradesheet as PDF
-st.subheader("📥 Download Your Gradesheet")
-if st.button("Download Gradesheet as PDF"):
-    pdf_content = generate_pdf(current_marks, adjusted_marks, target_sgpa)
-    st.download_button(label="Download Gradesheet as PDF", data=pdf_content, file_name="gradesheet.pdf", mime='application/pdf')
+# Download gradesheet as PDF
+st.header("📥 Download Your Gradesheet")
+if st.button("Download PDF"):
+    pdf_bytes = generate_pdf(current_marks, adjusted_marks, target_sgpa)
+    st.download_button(label="Download Gradesheet PDF", data=pdf_bytes, file_name="gradesheet.pdf", mime='application/pdf')
