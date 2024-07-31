@@ -22,6 +22,15 @@ This project is designed to assist students in managing and predicting their aca
 8. **Motivational Quotes:** Stay motivated with random motivational quotes.
 9. **Downloadable PDF:** Download your gradesheet as a PDF for easy sharing and record-keeping.
 
+## Website pictures:
+   ![image](https://github.com/user-attachments/assets/679f33c7-c01e-4144-a843-8ee5d734d799)
+![image](https://github.com/user-attachments/assets/469f11d1-b9cc-4fb3-a66b-f22e65399386)
+![image](https://github.com/user-attachments/assets/0ca4cb22-c43a-43dd-a986-140ceddd1e51)
+![image](https://github.com/user-attachments/assets/32f5c7fb-7e2a-417a-8964-0443dbf3f5d5)
+![image](https://github.com/user-attachments/assets/a945c3b2-782e-485a-91f0-9ef9839f7f02)
+
+
+
 ## Installation
 
 To run this project locally, follow these steps:
